@@ -1,15 +1,15 @@
 # PocketJS / Pocket Shell on iPhone 3GS (iOS 6.1.6)
 
-Практический порт и пошаговая инструкция по запуску [pocket-stack/pocket-shell](https://github.com/pocket-stack/pocket-shell) и [pocket-stack/pocketjs](https://github.com/pocket-stack/pocketjs) на **jailbroken iPhone 3GS**.
+A practical port and step-by-step guide for running [pocket-stack/pocket-shell](https://github.com/pocket-stack/pocket-shell) and [pocket-stack/pocketjs](https://github.com/pocket-stack/pocketjs) on a **jailbroken iPhone 3GS**.
 
-> Статус: **работает на реальном iPhone 3GS**.  
-> Проверено на `iPhone2,1 / N88AP / iOS 6.1.6 (10B500)`, framebuffer `320×480 @1x`, renderer `GLES1`.
+> Status: **working on a real iPhone 3GS**.  
+> Tested on `iPhone2,1 / N88AP / iOS 6.1.6 (10B500)`, framebuffer `320×480 @1x`, renderer `GLES1`.
 
-Этот репозиторий не является форком PocketJS. Он содержит воспроизводимый патч, инструкции и заметки по реальному переносу существующего iPod touch 4 target на iPhone 3GS.
+This repository is not a fork of PocketJS. It contains a reproducible patch, setup instructions, and notes from a real-world port of the existing iPod touch 4 target to the iPhone 3GS.
 
-## Что получилось
+## Result
 
-Финальный build/deploy на устройстве:
+Final build/deploy output on the device:
 
 ```text
 built .../PocketShellTouch.app
@@ -17,7 +17,7 @@ PocketShellTouch: Mach-O executable arm_v7
 deployed User app ... with byte-exact readback
 ```
 
-После `launch` runtime вернул:
+After `launch`, the runtime reported:
 
 ```json
 {
@@ -31,9 +31,9 @@ deployed User app ... with byte-exact readback
 }
 ```
 
-То есть Pocket Shell реально запущен как ARMv7 user app на iOS 6.1.6, рендерит через OpenGL ES 1 и использует родной экран 3GS `320×480 @1x`.
+In other words, Pocket Shell is actually running as a native ARMv7 user app on iOS 6.1.6, rendering through OpenGL ES 1 and using the native iPhone 3GS framebuffer at `320×480 @1x`.
 
-## Проверенная конфигурация
+## Tested configuration
 
 ### iPhone
 
@@ -46,7 +46,7 @@ deployed User app ... with byte-exact readback
 - AppSync Unified
 - OpenSSH
 - `ldid`, `uicache`, `uiopen`
-- ActivationState в нашем случае: `WildcardActivated`
+- ActivationState on the tested device: `WildcardActivated`
 
 ### Mac
 
@@ -55,13 +55,13 @@ deployed User app ... with byte-exact readback
 - Bun 1.4.x
 - Rust via rustup
 - Rust toolchain: `nightly-2026-07-02`
-- Xcode **26.6 Apple Silicon** для `ld-classic`
-- Xcode 27 может быть установлен параллельно, но для сборки legacy ARMv7 target не подходит
+- Xcode **26.6 Apple Silicon** for `ld-classic`
+- Xcode 27 can remain installed in parallel, but it is not suitable for this legacy ARMv7 build path
 - Homebrew `libimobiledevice`, `libusbmuxd`, `ldid`, `rustup`
 
-## Почему штатный iPod touch 4 target почти подходит
+## Why the existing iPod touch 4 target is a good base
 
-В PocketJS уже есть target для iPod touch 4:
+PocketJS already has a target for the iPod touch 4:
 
 ```text
 iPod4,1 / N81AP
@@ -71,7 +71,7 @@ iOS 6.1.6 / 10B500
 @2x
 ```
 
-У iPhone 3GS для нашей задачи очень похожая legacy iOS среда, но экран другой:
+The iPhone 3GS runs a very similar legacy iOS environment for this use case, but its display is different:
 
 ```text
 iPhone2,1 / N88AP
@@ -81,13 +81,13 @@ iOS 6.1.6 / 10B500
 @1x
 ```
 
-Поэтому мы переиспользуем существующий iPod touch 4 host/toolchain path и меняем identity + physical viewport + raster density.
+So this port reuses the existing iPod touch 4 host/toolchain path and changes only the device identity, physical viewport, and raster density.
 
 ---
 
-# Быстрый путь
+# Quick path
 
-Если iPhone уже подготовлен (SSH, AppSync, свободное место), основная последовательность такая:
+If the iPhone is already prepared with SSH, AppSync, and enough free space, the main sequence is:
 
 ```bash
 git clone --recurse-submodules https://github.com/pocket-stack/pocket-shell.git
@@ -114,47 +114,47 @@ DEVELOPER_DIR=/Applications/Xcode-26.6.app/Contents/Developer \
   bun run touch launch
 ```
 
-Но первый запуск требует подготовить jailbreak-транспорт, SSH keys, ARMv7 sysroot и Xcode 26.6. Полная инструкция ниже.
+The first setup still requires preparing the jailbreak transport, SSH keys, ARMv7 sysroot, and Xcode 26.6. The complete process is documented below.
 
 ---
 
-# 1. Подготовка Mac
+# 1. Prepare the Mac
 
-Установите Homebrew-инструменты:
+Install the required Homebrew tools:
 
 ```bash
 brew install libimobiledevice libusbmuxd rustup ldid bun
 ```
 
-Добавьте rustup в PATH:
+Add rustup to your PATH:
 
 ```bash
 echo 'export PATH="$(brew --prefix rustup)/bin:$PATH"' >> ~/.zshrc
 export PATH="$(brew --prefix rustup)/bin:$PATH"
 ```
 
-Установите toolchain, который ожидает текущий PocketJS:
+Install the toolchain expected by the current PocketJS tree:
 
 ```bash
 rustup toolchain install nightly-2026-07-02
 rustup component add rust-src --toolchain nightly-2026-07-02
 ```
 
-Проверка USB:
+Check USB device detection:
 
 ```bash
 idevice_id -l
 ```
 
-Должен появиться UDID устройства. В дальнейших примерах он обозначен как `<YOUR_UDID>`.
+Your device UDID should appear. The rest of this guide uses `<YOUR_UDID>` as a placeholder.
 
 ---
 
-# 2. OpenSSH на iPhone 3GS
+# 2. Install OpenSSH on the iPhone 3GS
 
-В нашем случае OpenSSH из Cydia не устанавливался: старые репозитории отдавали timeout. Рабочим обходным путём оказался [Legacy iOS Kit](https://github.com/LukeZGD/Legacy-iOS-Kit).
+In the tested setup, installing OpenSSH directly from Cydia failed because the old repositories repeatedly timed out. The working workaround was [Legacy iOS Kit](https://github.com/LukeZGD/Legacy-iOS-Kit).
 
-## Через Legacy iOS Kit SSH Ramdisk
+## Using the Legacy iOS Kit SSH ramdisk
 
 ```bash
 git clone --filter=blob:none https://github.com/LukeZGD/Legacy-iOS-Kit
@@ -162,23 +162,23 @@ cd Legacy-iOS-Kit
 ./restore.sh --no-internet-check --sshrd
 ```
 
-Если первый запуск только установил dependencies и завершился — запустите команду ещё раз.
+If the first run only installs dependencies and exits, run the same command again.
 
-Для 3GS:
+For the iPhone 3GS:
 
-1. войти в DFU;
-2. выбрать `pwnDFU`;
-3. загрузить SSH ramdisk;
-4. в меню выбрать **Install OpenSSH (iOS 10 and lower)**;
-5. после `Done` выбрать **Reboot Device**.
+1. Enter DFU mode.
+2. Select `pwnDFU`.
+3. Boot the SSH ramdisk.
+4. Choose **Install OpenSSH (iOS 10 and lower)**.
+5. After `Done`, choose **Reboot Device**.
 
-После загрузки обычной iOS:
+After normal iOS boots again:
 
 ```bash
 iproxy 2222:22
 ```
 
-В другом Terminal:
+In another Terminal window:
 
 ```bash
 ssh \
@@ -187,15 +187,15 @@ ssh \
   -p 2222 root@127.0.0.1
 ```
 
-Стандартный пароль root на старом jailbreak обычно:
+The default root password on many old jailbreak installations is:
 
 ```text
 alpine
 ```
 
-Рекомендуется сменить его после настройки.
+Change it after setup.
 
-Проверьте на iPhone:
+Verify the required tools on the iPhone:
 
 ```bash
 uname -m
@@ -205,7 +205,7 @@ which uiopen
 dpkg -l | grep -Ei 'appsync|openssh|openssl'
 ```
 
-В нашем случае:
+The tested device reported:
 
 ```text
 iPhone2,1
@@ -219,35 +219,35 @@ OpenSSL 0.9.8zg-13
 
 ---
 
-# 3. Если системный раздел забит на 100%
+# 3. If the root filesystem is 100% full
 
-На 3GS root filesystem очень маленький. У нас перед установкой дополнительных компонентов было:
+The iPhone 3GS system partition is very small. Before installing some additional packages, the tested device looked like this:
 
 ```text
 /dev/disk0s1s1  1.3G  1.3G  0  100% /
 /dev/disk0s1s2  6.2G  1.3G  5.0G  21% /private/var
 ```
 
-Cydia умеет штатно перенести `/Applications` на большой data-раздел:
+Cydia includes its own stashing helper that can move `/Applications` to the larger data partition:
 
 ```bash
 ls -l /usr/libexec/cydia/free.sh
 /usr/libexec/cydia/free.sh
 ```
 
-После этого у нас стало:
+After running it, the tested device had:
 
 ```text
 /dev/disk0s1s1  1.3G  1.1G  174M  87% /
 ```
 
-а `/Applications` превратился в symlink в `/var/stash/...`.
+and `/Applications` had become a symlink into `/var/stash/...`.
 
-**Не делайте ручной перенос `/Applications`, если доступен штатный `free.sh`.**
+**Do not manually move `/Applications` if the stock Cydia `free.sh` helper is available.**
 
 ---
 
-# 4. Клонируем Pocket Shell
+# 4. Clone Pocket Shell
 
 ```bash
 cd ~/Downloads
@@ -260,24 +260,24 @@ bun run setup
 
 ---
 
-# 5. Применяем патч iPhone 3GS
+# 5. Apply the iPhone 3GS patch
 
-Скачайте этот репозиторий рядом или используйте файл из него:
+Clone this repository next to Pocket Shell or use the script from it:
 
 ```bash
 python3 /path/to/pocketjs-iphone3gs/scripts/apply-iphone3gs-patch.py ~/Downloads/pocket-shell
 ```
 
-Патч делает четыре вещи:
+The patch makes four important changes:
 
-1. `iPod4,1 / N81AP` → `iPhone2,1 / N88AP`;
-2. physical viewport `640×960` → `320×480`;
-3. raster density `2` → `1`;
-4. doctor принимает `WildcardActivated` и не требует принудительно выключать password authentication, сохраняя проверку public-key SSH.
+1. `iPod4,1 / N81AP` → `iPhone2,1 / N88AP`
+2. Physical viewport `640×960` → `320×480`
+3. Raster density `2` → `1`
+4. `doctor` accepts `WildcardActivated` and no longer requires password authentication to be forcibly disabled, while still requiring public-key SSH
 
-Подробнее: [PATCHING.md](PATCHING.md).
+See [PATCHING.md](PATCHING.md) for the exact changes.
 
-Проверьте:
+Verify the patch:
 
 ```bash
 grep -nE 'productType|hardwareModel' \
@@ -290,7 +290,7 @@ grep -n 'uname -m' \
   vendor/pocketjs/tools/ipodtouch4.ts
 ```
 
-Ожидаем:
+Expected values:
 
 ```text
 productType: "iPhone2,1"
@@ -302,9 +302,9 @@ uname -m ... iPhone2,1
 
 ---
 
-# 6. SSH key для автоматического deploy
+# 6. Create the SSH key used by deploy
 
-PocketJS deploy работает в `BatchMode=yes`, поэтому одного входа по паролю недостаточно.
+PocketJS deploy uses `BatchMode=yes`, so password-only SSH is not sufficient.
 
 ```bash
 mkdir -p ~/.cache/pocket-stack/ipodtouch4/ssh
@@ -317,7 +317,7 @@ ssh-keygen \
   -f ~/.cache/pocket-stack/ipodtouch4/ssh/id_rsa
 ```
 
-При запущенном `iproxy 2222:22` добавьте ключ на iPhone:
+With `iproxy 2222:22` running, append the public key to the iPhone:
 
 ```bash
 cat ~/.cache/pocket-stack/ipodtouch4/ssh/id_rsa.pub | \
@@ -328,7 +328,7 @@ ssh \
   'umask 077; mkdir -p /var/root/.ssh; cat >> /var/root/.ssh/authorized_keys; chmod 700 /var/root/.ssh; chmod 600 /var/root/.ssh/authorized_keys'
 ```
 
-Проверка входа без пароля:
+Test passwordless authentication:
 
 ```bash
 ssh \
@@ -340,13 +340,13 @@ ssh \
   'echo POCKETJS-SSH-OK'
 ```
 
-Ожидаем:
+Expected output:
 
 ```text
 POCKETJS-SSH-OK
 ```
 
-Теперь pinned host key:
+Now pin the SSH host key:
 
 ```bash
 ssh-keyscan -p 2222 -t rsa 127.0.0.1 2>/dev/null | \
@@ -356,7 +356,7 @@ sed 's/\[127.0.0.1\]:2222/[127.0.0.1]:2224/' \
 
 ---
 
-# 7. Guest build
+# 7. Build the guest
 
 ```bash
 cd ~/Downloads/pocket-shell
@@ -364,7 +364,7 @@ cd ~/Downloads/pocket-shell
 bun run touch guest
 ```
 
-На 3GS-профиле в нашем случае build сообщил:
+With the 3GS profile, the tested build reported:
 
 ```text
 target=ipodtouch4-dev, raster=1x
@@ -372,27 +372,27 @@ target=ipodtouch4-dev, raster=1x
 PocketJS build: done
 ```
 
-Это важная проверка: guest assets и шрифты уже генерируются для `@1x`.
+This is an important sanity check: guest assets and fonts are now being generated for `@1x`.
 
 ---
 
-# 8. ARMv7 sysroot
+# 8. Prepare the ARMv7 sysroot
 
-PocketJS iPod touch 4 target переиспользует валидированный iPhone 4S iOS 6.1.3 ARMv7 sysroot.
+The PocketJS iPod touch 4 target reuses the validated iPhone 4S iOS 6.1.3 ARMv7 sysroot.
 
-Подготовьте исходники:
+Prepare the pinned sources:
 
 ```bash
 bun run touch setup-sources
 ```
 
-Затем `prepare-sysroot` попросит `POCKETJS_IPHONE4S_IPSW`.
+Then `prepare-sysroot` will ask for `POCKETJS_IPHONE4S_IPSW`.
 
-## Как мы получили подходящий IPSW
+## How the working IPSW was produced
 
-Мы использовали Legacy iOS Kit **только на Mac как генератор rootfs source**. Этот IPSW НЕ прошивался на 3GS.
+Legacy iOS Kit was used **only on the Mac as a source for the sysroot**. This IPSW was never flashed to the iPhone 3GS.
 
-Оригинальный target:
+Original target firmware:
 
 ```text
 iPhone4,1
@@ -401,7 +401,7 @@ iOS 6.1.3
 SHA1: 7a62ee60b574301a6aafc48dcc9cccf0894ffb27
 ```
 
-Legacy iOS Kit запускался в no-device режиме:
+Run Legacy iOS Kit in no-device mode:
 
 ```bash
 cd ~/Downloads/Legacy-iOS-Kit
@@ -414,7 +414,7 @@ cd ~/Downloads/Legacy-iOS-Kit
   --no-internet-check
 ```
 
-Далее:
+Then choose:
 
 ```text
 Misc Utilities
@@ -424,13 +424,13 @@ Misc Utilities
 → Create IPSW
 ```
 
-В результате получился файл вида:
+The resulting file will look like:
 
 ```text
 iPhone4,1_6.1.3_10B329_CustomJ.ipsw
 ```
 
-Передайте его PocketJS явно:
+Point PocketJS at it explicitly:
 
 ```bash
 export POCKETJS_IPHONE4S_IPSW="/path/to/iPhone4,1_6.1.3_10B329_CustomJ.ipsw"
@@ -438,7 +438,7 @@ export POCKETJS_IPHONE4S_IPSW="/path/to/iPhone4,1_6.1.3_10B329_CustomJ.ipsw"
 bun run touch prepare-sysroot
 ```
 
-Проверка через `doctor` должна показать:
+A later `doctor` run should show:
 
 ```text
 [ok] validated iOS 6.1.3 ARMv7 sysroot (shared with iphone4s)
@@ -448,18 +448,18 @@ bun run touch prepare-sysroot
 
 ---
 
-# 9. Xcode 26.6 и ld-classic
+# 9. Xcode 26.6 and ld-classic
 
-Это один из главных нюансов.
+This is one of the most important compatibility details.
 
-У нас был Xcode 27 из App Store, но PocketJS legacy ARMv7 build требует `ld-classic`. Поэтому Xcode 26.6 Apple Silicon был установлен параллельно:
+The tested Mac already had Xcode 27 from the App Store, but the PocketJS legacy ARMv7 build expects `ld-classic`. Xcode 26.6 Apple Silicon was therefore installed side-by-side:
 
 ```text
-/Applications/Xcode.app        # текущий Xcode 27
-/Applications/Xcode-26.6.app   # для PocketJS
+/Applications/Xcode.app        # current Xcode 27
+/Applications/Xcode-26.6.app   # used for PocketJS
 ```
 
-После скачивания `.xip`:
+After downloading the `.xip`:
 
 ```bash
 cd ~/Downloads
@@ -467,7 +467,7 @@ xip --expand Xcode_26.6_Apple_silicon.xip
 sudo mv Xcode.app /Applications/Xcode-26.6.app
 ```
 
-Первичная настройка:
+Run first-time setup:
 
 ```bash
 sudo env \
@@ -479,18 +479,18 @@ sudo env \
   xcodebuild -runFirstLaunch
 ```
 
-Проверка:
+Verify the legacy linker:
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode-26.6.app/Contents/Developer \
   xcrun --find ld-classic
 ```
 
-Не обязательно менять глобальный `xcode-select`. Для PocketJS достаточно задавать `DEVELOPER_DIR` на конкретную команду.
+There is no need to change the global `xcode-select`. Setting `DEVELOPER_DIR` for the PocketJS build commands is enough.
 
 ---
 
-# 10. Doctor
+# 10. Run doctor
 
 ```bash
 export POCKETJS_IPODTOUCH4_UDID="<YOUR_UDID>"
@@ -498,7 +498,7 @@ export POCKETJS_IPODTOUCH4_UDID="<YOUR_UDID>"
 bun run touch doctor
 ```
 
-Успешный doctor в нашем случае проверил:
+A successful run on the tested setup checked:
 
 ```text
 [ok] bun
@@ -520,11 +520,11 @@ bun run touch doctor
 [ok] self-signed User app installation (AppSync Unified)
 ```
 
-Если последняя строка начинается с `[ok]`, AppSync найден; текст подсказки после двоеточия в текущем doctor может выглядеть как инструкция по установке даже при успешной проверке.
+If the AppSync line begins with `[ok]`, AppSync was detected. In the current doctor output, the detail text after the colon may still look like an installation hint even when the check succeeded.
 
 ---
 
-# 11. Build + deploy
+# 11. Build and deploy
 
 ```bash
 export POCKETJS_IPODTOUCH4_UDID="<YOUR_UDID>"
@@ -533,13 +533,13 @@ DEVELOPER_DIR=/Applications/Xcode-26.6.app/Contents/Developer \
   bun run touch deploy
 ```
 
-Первый build может потребовать:
+The first native build may require:
 
 ```bash
 rustup component add rust-src --toolchain nightly-2026-07-02
 ```
 
-Успешный результат:
+Successful output:
 
 ```text
 PocketShellTouch: Mach-O executable arm_v7
@@ -555,7 +555,7 @@ DEVELOPER_DIR=/Applications/Xcode-26.6.app/Contents/Developer \
   bun run touch launch
 ```
 
-Проверенный runtime:
+Verified runtime status:
 
 ```json
 {
@@ -569,25 +569,25 @@ DEVELOPER_DIR=/Applications/Xcode-26.6.app/Contents/Developer \
 }
 ```
 
-Готово: Pocket Shell работает на iPhone 3GS.
+At this point, Pocket Shell is running on the iPhone 3GS.
 
 ---
 
-# Полезные команды после запуска
+# Useful commands after launch
 
-Status:
+Check status:
 
 ```bash
 bun run touch status
 ```
 
-Capture framebuffer:
+Capture the framebuffer:
 
 ```bash
 bun run touch capture
 ```
 
-Повторный deploy после изменений:
+Redeploy after changes:
 
 ```bash
 bun run touch guest
@@ -601,52 +601,54 @@ DEVELOPER_DIR=/Applications/Xcode-26.6.app/Contents/Developer \
 
 ---
 
-# Что НЕ нужно коммитить
+# What you should NOT commit
 
-Никогда не публикуйте:
+Never publish:
 
-- свой UDID;
+- your UDID;
 - `~/.cache/pocket-stack/ipodtouch4/ssh/id_rsa`;
-- `authorized_keys`, если там есть другие личные ключи;
+- `authorized_keys` if it contains other personal keys;
 - Xcode;
-- IPSW;
-- приватные activation records;
-- локальные cache directories PocketJS.
+- IPSW files;
+- private activation records;
+- local PocketJS cache directories.
 
-Этот репозиторий содержит только патч, инструкции и вспомогательные скрипты.
+This repository contains only the patch, documentation, and helper scripts.
 
 ---
 
 # Troubleshooting
 
-Полный журнал проблем и решений: [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+The complete set of real-world problems and fixes is documented in [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
-Коротко, реальные проблемы, с которыми мы столкнулись:
+The issues encountered during this port included:
 
-- Cydia не могла скачать OpenSSH;
-- OpenSSH пришлось установить через Legacy iOS Kit SSH ramdisk;
-- старый OpenSSH требует RSA compatibility options;
-- root filesystem был заполнен на 100%;
-- помог `/usr/libexec/cydia/free.sh`;
-- `ActivationState=WildcardActivated` не проходил жёсткую проверку PocketJS;
-- sysroot потребовал Custom iPhone 4S 6.1.3 IPSW;
-- AppleDB/raw GitHub DNS lookup в Legacy iOS Kit периодически ломался;
-- Xcode 27 не подходил из-за legacy linker path;
-- понадобился Xcode 26.6 и `ld-classic`;
-- Rust nightly потребовал компонент `rust-src`.
+- Cydia could not download OpenSSH;
+- OpenSSH had to be installed through the Legacy iOS Kit SSH ramdisk;
+- old OpenSSH required RSA compatibility options;
+- the root filesystem was 100% full;
+- `/usr/libexec/cydia/free.sh` fixed the root partition pressure;
+- `ActivationState=WildcardActivated` failed the upstream PocketJS identity check;
+- sysroot preparation required a custom iPhone 4S iOS 6.1.3 IPSW;
+- AppleDB/raw GitHub DNS lookups in Legacy iOS Kit failed intermittently;
+- Xcode 27 was unsuitable for the expected legacy linker path;
+- Xcode 26.6 and `ld-classic` were required;
+- the Rust nightly toolchain needed the `rust-src` component.
 
 ---
 
-# Upstream
+# Upstream projects
 
-Все основные технологии принадлежат upstream-проектам:
+The actual runtime, shell, and tooling come from these upstream projects:
 
 - [pocket-stack/pocket-shell](https://github.com/pocket-stack/pocket-shell)
 - [pocket-stack/pocketjs](https://github.com/pocket-stack/pocketjs)
 - [LukeZGD/Legacy-iOS-Kit](https://github.com/LukeZGD/Legacy-iOS-Kit)
 
-Этот репозиторий документирует отдельный экспериментальный iPhone 3GS target на базе существующего iPod touch 4 workflow.
+This repository documents an experimental iPhone 3GS target built on top of the existing iPod touch 4 workflow.
 
-## Дисклеймер
+## Disclaimer
 
-Это эксперимент с legacy jailbroken hardware. Делайте backup устройства. Команды, изменяющие jailbreak/system partition, выполняются на ваш риск. Custom iPhone 4S IPSW в этой инструкции используется как источник sysroot для сборки и **не предназначен для прошивки iPhone 3GS**.
+This is an experiment involving legacy jailbroken hardware. Back up the device before changing the jailbreak or system partition. Any command that modifies the system is run at your own risk.
+
+The custom iPhone 4S IPSW mentioned in this guide is used only as a **sysroot source for compilation** and is **not intended to be flashed to an iPhone 3GS**.
