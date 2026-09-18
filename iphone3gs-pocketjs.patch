@@ -1,0 +1,31 @@
+diff --git a/tools/ipodtouch4-toolchain.ts b/tools/ipodtouch4-toolchain.ts
+--- a/tools/ipodtouch4-toolchain.ts
++++ b/tools/ipodtouch4-toolchain.ts
+@@
+-  productType: "iPod4,1",
+-  hardwareModel: "N81AP",
++  productType: "iPhone2,1",
++  hardwareModel: "N88AP",
+diff --git a/tools/ipodtouch4-profile.ts b/tools/ipodtouch4-profile.ts
+--- a/tools/ipodtouch4-profile.ts
++++ b/tools/ipodtouch4-profile.ts
+@@
+-export const IPODTOUCH4_PHYSICAL_VIEWPORT = [640, 960] as const;
+-export const IPODTOUCH4_RASTER_DENSITY = 2;
++export const IPODTOUCH4_PHYSICAL_VIEWPORT = [320, 480] as const;
++export const IPODTOUCH4_RASTER_DENSITY = 1;
+diff --git a/tools/ipodtouch4.ts b/tools/ipodtouch4.ts
+--- a/tools/ipodtouch4.ts
++++ b/tools/ipodtouch4.ts
+@@
+-    observed.activation !== "Activated"
++    !["Activated", "WildcardActivated"].includes(observed.activation)
+@@
+-        `${DEVICE_VERSION} (${DEVICE_BUILD}) Activated`,
++        `${DEVICE_VERSION} (${DEVICE_BUILD}) Activated/WildcardActivated`,
+@@
+-      "set -eu; test \"$(uname -m)\" = iPod4,1; test -x /usr/bin/ldid; test -x /usr/bin/uicache; test -x /usr/bin/uiopen; test -w /var/mobile/Applications; " +
++      "set -eu; test \"$(uname -m)\" = iPhone2,1; test -x /usr/bin/ldid; test -x /usr/bin/uicache; test -x /usr/bin/uiopen; test -w /var/mobile/Applications; " +
+         "/usr/sbin/sshd -T | grep -q '^pubkeyauthentication yes$'; " +
+-        "/usr/sbin/sshd -T | grep -q '^passwordauthentication no$'; echo jailbreak-key-only-usb-ready",
++        "echo jailbreak-key-usb-ready",
